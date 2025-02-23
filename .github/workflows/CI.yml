@@ -62,7 +62,6 @@ jobs:
           manylinux: auto
           container: ci
           working-directory: ./crates/sbv2_bindings
-          docker-options: -v ~/.cache/sbv2/all.bin:/root/.cache/sbv2/all.bin
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
