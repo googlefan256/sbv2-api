@@ -48,7 +48,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sed 's/!TYPE!/${{ matrix.platform.features }}/g' ./crates/sbv2_bindings/pyproject-template.toml > ./crates/sbv2_bindings/pyproject.toml
-      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv dict-bin/all.bin ~/.cache/sbv2/ && rmdir dict-bin
+      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv ~/.cache/sbv2/dict-bin/all.bin ~/.cache/sbv2/ && rmdir ~/.cache/sbv2/dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -91,8 +91,8 @@ jobs:
         run: (Get-Content .\crates\sbv2_bindings\pyproject-template.toml) -replace '!TYPE!', '${{ matrix.platform.features }}' | Set-Content .\crates\sbv2_bindings\pyproject.toml
       - run: |
           gh run download ${{ github.run_id }} -n dict-bin -D %USERPROFILE%\.cache\sbv2
-          move dict-bin\all.bin %USERPROFILE%\.cache\sbv2\
-          rmdir dict-bin
+          move %USERPROFILE%\.cache\sbv2\dict-bin\all.bin %USERPROFILE%\.cache\sbv2\
+          rmdir %USERPROFILE%\.cache\sbv2\dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -127,7 +127,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - run: sed 's/!TYPE!/${{ matrix.platform.features }}/g' ./crates/sbv2_bindings/pyproject-template.toml > ./crates/sbv2_bindings/pyproject.toml
-      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv dict-bin/all.bin ~/.cache/sbv2/ && rmdir dict-bin
+      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv ~/.cache/sbv2/dict-bin/all.bin ~/.cache/sbv2/ && rmdir ~/.cache/sbv2/dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -147,6 +147,7 @@ jobs:
     name: Main Package
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
