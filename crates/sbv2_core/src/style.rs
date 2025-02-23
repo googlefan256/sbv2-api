@@ -1,8 +1,8 @@
 use crate::error::Result;
 use ndarray::{s, Array1, Array2};
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
-#[derive(Deserialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Data {
     pub shape: [usize; 2],
     pub data: Vec<Vec<f32>>,

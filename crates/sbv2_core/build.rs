@@ -5,7 +5,7 @@ use std::io::copy;
 use std::path::PathBuf;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
-    let static_path = home_dir().unwrap().join(".cache/sbv2/all.bin");
+    let static_path = home_dir().unwrap().join("./.cache/sbv2/all.bin");
     let out_path = PathBuf::from(&env::var("OUT_DIR").unwrap()).join("all.bin");
     println!("cargo:rerun-if-changed=build.rs");
     if static_path.exists() {

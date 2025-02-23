@@ -15,17 +15,39 @@ permissions:
   packages: write
 
 jobs:
+  download-dict:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: curl https://huggingface.co/neody/sbv2-api-assets/resolve/main/dic/all.bin -o all.bin
+      - name: Upload all.bin
+        uses: actions/upload-artifact@v4
+        with:
+          name: dict-bin
+          path: all.bin
   python-linux:
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     strategy:
       matrix:
         platform:
           - runner: ubuntu-latest
             target: x86_64
+            features: default
           - runner: ubuntu-24.04-arm
             target: aarch64
+            features: default
+          - runner: ubuntu-latest
+            target: x86_64
+            features: cuda
+          - runner: ubuntu-24.04-arm
+            target: aarch64
+            features: cuda
     steps:
       - uses: actions/checkout@v4
+      - run: sed 's/!TYPE!/${{ matrix.platform.features }}/g' ./crate/sbv2_binidngs/pyproject-template.toml > ./crate/sbv2_binidngs/pyproject.toml
+      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv dict-bin/all.bin ~/.cache/sbv2/ && rmdir dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -42,18 +64,33 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-linux-${{ matrix.platform.target }}
+          name: wheels-linux-${{ matrix.platform.target }}-${{ matrix.platform.features }}
           path: ./crates/sbv2_bindings/dist
 
   python-windows:
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     strategy:
       matrix:
         platform:
           - runner: windows-latest
             target: x64
+            features: cuda
+          - runner: windows-latest
+            target: x64
+            features: cpu
+          - runner: windows-latest
+            target: x64
+            features: directml
     steps:
       - uses: actions/checkout@v4
+      - shell: pwsh
+        run: (Get-Content .\crate\sbv2_binidngs\pyproject-template.toml) -replace '!TYPE!', '${{ matrix.platform.features }}' | Set-Content .\crate\sbv2_binidngs\pyproject.toml
+      - run: |
+          gh run download ${{ github.run_id }} -n dict-bin -D %USERPROFILE%\.cache\sbv2
+          move dict-bin\all.bin %USERPROFILE%\.cache\sbv2\
+          rmdir dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -68,18 +105,26 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-windows-${{ matrix.platform.target }}
+          name: wheels-windows-${{ matrix.platform.target }}-${{ matrix.platform.features }}
           path: ./crates/sbv2_bindings/dist
 
   python-macos:
     runs-on: ${{ matrix.platform.runner }}
+    env:
+      GH_TOKEN: ${{ github.token }}
     strategy:
       matrix:
         platform:
           - runner: macos-14
             target: aarch64
+            features: cpu
+          - runner: macos-14
+            target: aarch64
+            features: coreml
     steps:
       - uses: actions/checkout@v4
+      - run: sed 's/!TYPE!/${{ matrix.platform.features }}/g' ./crate/sbv2_binidngs/pyproject-template.toml > ./crate/sbv2_binidngs/pyproject.toml
+      - run: gh run download ${{ github.run_id }} -n dict-bin -D ~/.cache/sbv2 && mv dict-bin/all.bin ~/.cache/sbv2/ && rmdir dict-bin
       - uses: actions/setup-python@v5
         with:
           python-version: 3.x
@@ -93,36 +138,34 @@ jobs:
       - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-macos-${{ matrix.platform.target }}
+          name: wheels-macos-${{ matrix.platform.target }}-${{ matrix.platform.features }}
           path: ./crates/sbv2_bindings/dist
-
-  python-sdist:
+  python-main:
+    name: Main Package
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - name: Build sdist
-        uses: PyO3/maturin-action@v1
+      - uses: actions/setup-python@v5
         with:
-          command: sdist
-          args: --out dist
-          working-directory: ./crates/sbv2_bindings
-      - name: Upload sdist
+          python-version: 3.x
+      - run: pipx install --upgrade build
+      - run: python -m build
+        working-directory: ./crates/sbv2_bindings/pkg
+      - name: Upload wheels
         uses: actions/upload-artifact@v4
         with:
-          name: wheels-sdist
-          path: ./crates/sbv2_bindings/dist
+          name: wheels-main
+          path: ./crates/sbv2_bindings/pkg/dist
   python-wheel:
     name: Wheel Upload
     runs-on: ubuntu-latest
-    needs: [python-linux, python-windows, python-macos, python-sdist]
+    needs: [python-linux, python-windows, python-macos, python-main]
     env:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
       - run: gh run download ${{ github.run_id }}
       - name: release
-        run: |
-          gh release create commit-${GITHUB_SHA:0:8} --prerelease wheels-*/*
+        run: gh release create commit-${GITHUB_SHA:0:8} --prerelease wheels-*/*
 
   python-release:
     name: Release
@@ -134,12 +177,12 @@ jobs:
       GH_TOKEN: ${{ github.token }}
     steps:
       - uses: actions/checkout@v4
-      - run: gh run download ${{ github.run_id }}
-      - name: Publish to PyPI
-        uses: PyO3/maturin-action@v1
+      - uses: actions/setup-python@v5
         with:
-          command: upload
-          args: --non-interactive --skip-existing wheels-*/*
+          python-version: 3.x
+      - run: gh run download ${{ github.run_id }}
+      - run: pipx install twine
+      - run: twine upload wheels-*/*.whl
 
   docker:
     runs-on: ${{ matrix.machine.runner }}

@@ -41,6 +41,19 @@ pub fn load_sbv2file(buf: js_sys::Uint8Array) -> Result<js_sys::Array, JsError> 
     ]))
 }
 
+#[wasm_bindgen]
+pub fn load_aivmx(buf: js_sys::Uint8Array) -> Result<js_sys::Array, JsError> {
+    let (style_vectors, vits2) = sbv2file::parse_aivmx(array_helper::array8_to_vec8(buf))?;
+    let buf = array_helper::vec8_to_array8(vits2);
+    Ok(array_helper::vec_to_array(vec![
+        StyleVectorWrap {
+            style_vector: style::load_style(style_vectors)?,
+        }
+        .into(),
+        buf.into(),
+    ]))
+}
+
 #[allow(clippy::too_many_arguments)]
 #[wasm_bindgen]
 pub async fn synthesize(
