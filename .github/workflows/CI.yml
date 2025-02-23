@@ -152,7 +152,7 @@ jobs:
         with:
           python-version: 3.x
       - run: pipx install build
-      - run: python -m build
+      - run: pyproject-build
         working-directory: ./crates/sbv2_bindings/pkg
       - name: Upload wheels
         uses: actions/upload-artifact@v4
